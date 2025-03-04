@@ -3,34 +3,23 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
 
-var DB *gorm.DB
-
-type Category struct {
-	ID   uint   `gorm:"primaryKey" json:"id"`
-	Name string `json:"name"`
-}
-
-type Transaction struct {
-	ID         uint       `gorm:"primaryKey" json:"id"`
-	Type       string     `json:"type"`
-	Amount     float64    `json:"amount"`
-	Note       string     `json:"note"`
-	CategoryID *uint      `json:"category_id"`
-	Category   Category   `gorm:"foreignKey:CategoryID"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-	DeletedAt  *time.Time `json:"deleted_at"`
-}
-
 func InitDatabase() {
-	dsn := "host=localhost user=postgres password=24'K>W6tMr5an!? dbname=gobudget port=5432 sslmode=disable"
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PORT"),
+	)
+
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
@@ -41,6 +30,6 @@ func InitDatabase() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	DB.AutoMigrate(&Transaction{})
+	DB.AutoMigrate(&User{}, &Category{}, &Transaction{})
 	fmt.Println("Database connected & migrated successfully!")
 }

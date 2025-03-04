@@ -3,6 +3,7 @@
 GoBudget adalah aplikasi pencatatan keuangan pribadi berbasis REST API yang dibuat menggunakan Golang dan PostgreSQL.
 
 ## Fitur
+- Registrasi dan login pengguna
 - Menambahkan transaksi (pemasukan dan pengeluaran) dengan kategori
 - Mengupdate transaksi
 - Menghapus transaksi (soft delete dengan `deleted_at`)
@@ -35,6 +36,7 @@ DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=yourpassword
 DB_NAME=gobudget
+JWT_SECRET=your_jwt_secret
 ```
 
 ### 4. Install Dependencies
@@ -48,19 +50,53 @@ go run main.go
 ```
 
 ## Endpoint API
-### 1. Menampilkan Semua Transaksi
+### 1. Registrasi Pengguna
+```http
+POST /register
+```
+Body JSON:
+```json
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+### 2. Login Pengguna
+```http
+POST /login
+```
+Body JSON:
+```json
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+Response:
+```json
+{
+  "token": "your_jwt_token"
+}
+```
+
+### 3. Menampilkan Semua Transaksi
 ```http
 GET /transactions
+Authorization: Bearer your_jwt_token
 ```
 
-### 2. Menampilkan Transaksi dengan Filter
+### 4. Menampilkan Transaksi dengan Filter
 ```http
 GET /transactions?category_id=1&type=Income&start_date=2025-03-01&end_date=2025-03-03
+Authorization: Bearer your_jwt_token
 ```
 
-### 3. Menambahkan Transaksi
+### 5. Menambahkan Transaksi
 ```http
 POST /transactions
+Authorization: Bearer your_jwt_token
 ```
 Body JSON:
 ```json
@@ -72,9 +108,10 @@ Body JSON:
 }
 ```
 
-### 4. Mengupdate Transaksi
+### 6. Mengupdate Transaksi
 ```http
 PUT /transactions/{id}
+Authorization: Bearer your_jwt_token
 ```
 Body JSON:
 ```json
@@ -85,14 +122,16 @@ Body JSON:
 }
 ```
 
-### 5. Menghapus Transaksi (Soft Delete)
+### 7. Menghapus Transaksi (Soft Delete)
 ```http
 DELETE /transactions/{id}
+Authorization: Bearer your_jwt_token
 ```
 
-### 6. Ringkasan Keuangan
+### 8. Ringkasan Keuangan
 ```http
 GET /summary
+Authorization: Bearer your_jwt_token
 ```
 Response:
 ```json
@@ -103,9 +142,10 @@ Response:
 }
 ```
 
-### 7. Menambahkan Kategori
+### 9. Menambahkan Kategori
 ```http
 POST /categories
+Authorization: Bearer your_jwt_token
 ```
 Body JSON:
 ```json
@@ -114,15 +154,16 @@ Body JSON:
 }
 ```
 
-### 8. Menampilkan Semua Kategori
+### 10. Menampilkan Semua Kategori
 ```http
 GET /categories
+Authorization: Bearer your_jwt_token
 ```
 
 ## Seeding Data
 Untuk mengisi database dengan data awal untuk testing, jalankan:
 ```sh
-go run seed.go
+go run seeder.go
 ```
 
 ## Lisensi
