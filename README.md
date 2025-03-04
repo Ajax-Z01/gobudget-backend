@@ -3,11 +3,13 @@
 GoBudget adalah aplikasi pencatatan keuangan pribadi berbasis REST API yang dibuat menggunakan Golang dan PostgreSQL.
 
 ## Fitur
-- Menambahkan transaksi (pemasukan dan pengeluaran)
+- Menambahkan transaksi (pemasukan dan pengeluaran) dengan kategori
 - Mengupdate transaksi
 - Menghapus transaksi (soft delete dengan `deleted_at`)
 - Melihat daftar transaksi
+- Memfilter transaksi berdasarkan kategori, tipe, dan rentang tanggal
 - Melihat ringkasan keuangan (total pemasukan, pengeluaran, dan saldo)
+- Seeding data untuk testing
 
 ## Teknologi yang Digunakan
 - Golang
@@ -51,7 +53,12 @@ go run main.go
 GET /transactions
 ```
 
-### 2. Menambahkan Transaksi
+### 2. Menampilkan Transaksi dengan Filter
+```http
+GET /transactions?category_id=1&type=Income&start_date=2025-03-01&end_date=2025-03-03
+```
+
+### 3. Menambahkan Transaksi
 ```http
 POST /transactions
 ```
@@ -60,11 +67,12 @@ Body JSON:
 {
   "type": "Income",
   "amount": 5000,
-  "note": "Gaji bulan ini"
+  "note": "Gaji bulan ini",
+  "category_id": 1
 }
 ```
 
-### 3. Mengupdate Transaksi
+### 4. Mengupdate Transaksi
 ```http
 PUT /transactions/{id}
 ```
@@ -72,16 +80,17 @@ Body JSON:
 ```json
 {
   "amount": 5500,
-  "note": "Gaji bulan ini (update)"
+  "note": "Gaji bulan ini (update)",
+  "category_id": 2
 }
 ```
 
-### 4. Menghapus Transaksi (Soft Delete)
+### 5. Menghapus Transaksi (Soft Delete)
 ```http
 DELETE /transactions/{id}
 ```
 
-### 5. Ringkasan Keuangan
+### 6. Ringkasan Keuangan
 ```http
 GET /summary
 ```
@@ -94,6 +103,27 @@ Response:
 }
 ```
 
+### 7. Menambahkan Kategori
+```http
+POST /categories
+```
+Body JSON:
+```json
+{
+  "name": "Makanan"
+}
+```
+
+### 8. Menampilkan Semua Kategori
+```http
+GET /categories
+```
+
+## Seeding Data
+Untuk mengisi database dengan data awal untuk testing, jalankan:
+```sh
+go run seed.go
+```
+
 ## Lisensi
 Proyek ini menggunakan lisensi MIT.
-

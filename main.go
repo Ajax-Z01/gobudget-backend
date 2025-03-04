@@ -6,6 +6,7 @@ import (
 
 func main() {
 	InitDatabase()
+	SeedDatabase()
 
 	r := gin.Default()
 
@@ -15,6 +16,10 @@ func main() {
 	r.PUT("/transactions/:id", UpdateTransaction)
 	r.PUT("/transactions/delete/:id", SoftDeleteTransaction)
 	r.PUT("/transactions/restore/:id", RestoreTransaction)
+	r.POST("/categories", CreateCategory)
+	r.GET("/categories", GetCategories)
+	r.GET("/categories/:id/transactions", GetTransactionsByCategory)
+	r.PUT("/transactions/:id/category", UpdateTransactionCategory)
 	r.GET("/summary", GetSummary)
 
 	r.Run(":8080")

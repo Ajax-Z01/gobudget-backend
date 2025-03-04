@@ -12,14 +12,21 @@ import (
 
 var DB *gorm.DB
 
+type Category struct {
+	ID   uint   `gorm:"primaryKey" json:"id"`
+	Name string `json:"name"`
+}
+
 type Transaction struct {
-	ID        uint       `gorm:"primaryKey" json:"id"`
-	Type      string     `json:"type"`
-	Amount    float64    `json:"amount"`
-	Note      string     `json:"note"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID         uint       `gorm:"primaryKey" json:"id"`
+	Type       string     `json:"type"`
+	Amount     float64    `json:"amount"`
+	Note       string     `json:"note"`
+	CategoryID *uint      `json:"category_id"`
+	Category   Category   `gorm:"foreignKey:CategoryID"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+	DeletedAt  *time.Time `json:"deleted_at"`
 }
 
 func InitDatabase() {
