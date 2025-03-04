@@ -1,6 +1,6 @@
-# GoBudget - Personal Finance Tracker
+# GoBudget
 
-GoBudget adalah aplikasi pencatat keuangan pribadi berbasis API yang dibuat dengan Golang dan PostgreSQL. Aplikasi ini memungkinkan pengguna untuk mencatat pemasukan dan pengeluaran serta melihat ringkasan keuangan mereka.
+GoBudget adalah aplikasi pencatatan keuangan pribadi berbasis REST API yang dibuat menggunakan Golang dan PostgreSQL.
 
 ## Fitur
 - Menambahkan transaksi (pemasukan dan pengeluaran) dengan kategori
@@ -12,13 +12,12 @@ GoBudget adalah aplikasi pencatat keuangan pribadi berbasis API yang dibuat deng
 - Seeding data untuk testing
 
 ## Teknologi yang Digunakan
-- **Golang** sebagai backend utama
-- **Gin Gonic** sebagai framework HTTP
-- **GORM** sebagai ORM untuk PostgreSQL
-- **PostgreSQL** sebagai database utama
+- Golang
+- Gin (framework web)
+- GORM (ORM untuk database)
+- PostgreSQL
 
-## Instalasi dan Menjalankan Aplikasi
-
+## Instalasi & Penggunaan
 ### 1. Clone Repository
 ```sh
 git clone https://github.com/Ajax-Z01/gobudget.git
@@ -26,16 +25,24 @@ cd gobudget
 ```
 
 ### 2. Konfigurasi Database
-Pastikan PostgreSQL sudah berjalan dan buat database dengan nama `gobudget`. Sesuaikan konfigurasi di file `config.go`:
-```go
-DB_USER = "postgres"
-DB_PASSWORD = "yourpassword"
-DB_NAME = "gobudget"
-DB_HOST = "localhost"
-DB_PORT = "5432"
+Pastikan PostgreSQL sudah terinstall dan jalankan servernya. Buat database dengan nama `gobudget`.
+
+### 3. Buat File `.env`
+Buat file `.env` di root proyek dan isi dengan:
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=yourpassword
+DB_NAME=gobudget
 ```
 
-### 3. Jalankan Aplikasi
+### 4. Install Dependencies
+```sh
+go mod tidy
+```
+
+### 5. Jalankan Aplikasi
 ```sh
 go run main.go
 ```
@@ -65,17 +72,6 @@ Body JSON:
 }
 ```
 
-### 1. Menambah Transaksi
-- **Endpoint:** `POST /transactions`
-- **Body JSON:**
-  ```json
-  {
-    "type": "Income",
-    "amount": 5000,
-    "note": "Gaji bulan ini"
-  }
-  ```
-
 ### 4. Mengupdate Transaksi
 ```http
 PUT /transactions/{id}
@@ -88,27 +84,13 @@ Body JSON:
   "category_id": 2
 }
 ```
-### 2. Melihat Semua Transaksi
-- **Endpoint:** `GET /transactions`
-- **Response:**
-  ```json
-  [
-    {
-      "id": 1,
-      "type": "Income",
-      "amount": 5000,
-      "note": "Gaji bulan ini",
-      "deleted_at": null
-    }
-  ]
-  ```
 
-### 4. Menghapus Transaksi (Soft Delete)
+### 5. Menghapus Transaksi (Soft Delete)
 ```http
 DELETE /transactions/{id}
 ```
 
-### 5. Ringkasan Keuangan
+### 6. Ringkasan Keuangan
 ```http
 GET /summary
 ```
@@ -121,8 +103,28 @@ Response:
 }
 ```
 
-## Kontribusi
-Silakan buat pull request atau issue jika ingin berkontribusi pada proyek ini.
+### 7. Menambahkan Kategori
+```http
+POST /categories
+```
+Body JSON:
+```json
+{
+  "name": "Makanan"
+}
+```
+
+### 8. Menampilkan Semua Kategori
+```http
+GET /categories
+```
+
+## Seeding Data
+Untuk mengisi database dengan data awal untuk testing, jalankan:
+```sh
+go run seed.go
+```
 
 ## Lisensi
 Proyek ini menggunakan lisensi MIT.
+
