@@ -13,6 +13,7 @@ func SetupRouter() *gin.Engine {
 	auth := r.Group("/")
 	auth.Use(AuthMiddleware())
 	{
+		auth.GET("/user", GetUser)
 		auth.GET("/transactions", GetTransactions)
 		auth.POST("/transactions", CreateTransaction)
 		auth.GET("/transactions/:id", GetTransactionByID)

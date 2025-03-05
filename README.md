@@ -11,6 +11,7 @@ GoBudget adalah aplikasi pencatatan keuangan pribadi berbasis REST API yang dibu
 - Memfilter transaksi berdasarkan kategori, tipe, dan rentang tanggal
 - Melihat ringkasan keuangan (total pemasukan, pengeluaran, dan saldo)
 - Seeding data untuk testing
+- Mendapatkan informasi pengguna yang sedang login
 
 ## Teknologi yang Digunakan
 - Golang
@@ -160,6 +161,20 @@ GET /categories
 Authorization: Bearer your_jwt_token
 ```
 
+### 11. Mendapatkan Informasi Pengguna
+```http
+GET /user
+Authorization: Bearer your_jwt_token
+```
+Response:
+```json
+{
+  "id": 1,
+  "email": "test@example.com",
+  "name": "Test User"
+}
+```
+
 ## Seeding Data
 Untuk mengisi database dengan data awal untuk testing, jalankan:
 ```sh
@@ -168,4 +183,3 @@ go run seeder.go
 
 ## Lisensi
 Proyek ini menggunakan lisensi MIT.
-
