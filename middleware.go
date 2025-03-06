@@ -14,41 +14,54 @@ var jwtSecret = []byte(secretKey)
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
+		var tokenString string
+
+		if authHeader != "" {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		} else {
+			cookie, err := c.Cookie("token")
+			if err == nil {
+				tokenString = cookie
+			}
+		}
+
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token missing"})
 			c.Abort()
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method")
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 			return jwtSecret, nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err.Error()})
 			c.Abort()
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid claims"})
+		if !ok || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			c.Abort()
 			return
 		}
 
-		userID, ok := claims["user_id"].(float64)
+		userIDFloat, ok := claims["user_id"].(float64)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 			c.Abort()
 			return
 		}
 
-		c.Set("userID", uint(userID))
+		userID := uint(userIDFloat)
+
+		c.Set("userID", userID)
+
 		c.Next()
 	}
 }
