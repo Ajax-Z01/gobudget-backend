@@ -12,7 +12,7 @@ func SetupRouter() *gin.Engine {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type", "Accept", "Cookie"},
 		ExposeHeaders:    []string{"Content-Length", "Set-Cookie"},
 		AllowCredentials: true,
@@ -26,6 +26,7 @@ func SetupRouter() *gin.Engine {
 	auth.Use(AuthMiddleware())
 	{
 		auth.GET("/user", GetUser)
+		auth.POST("/logout", Logout)
 		auth.GET("/transactions", GetTransactions)
 		auth.POST("/transactions", CreateTransaction)
 		auth.GET("/transactions/:id", GetTransactionByID)

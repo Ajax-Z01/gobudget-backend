@@ -8,24 +8,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetTransactions retrieves transactions for the authenticated user
 func GetTransactions(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var transactions []Transaction
-	query := DB.Preload("Category").Where("deleted_at IS NULL").Find(&transactions)
+	query := DB.Preload("Category").Preload("User").Where("user_id = ? AND deleted_at IS NULL", userID)
 
-	startDate := c.Query("start_date")
-	endDate := c.Query("end_date")
-
-	if startDate != "" && endDate != "" {
+	// Apply filters if provided
+	if startDate, endDate := c.Query("start_date"), c.Query("end_date"); startDate != "" && endDate != "" {
 		query = query.Where("created_at BETWEEN ? AND ?", startDate, endDate)
 	}
-
-	categoryID := c.Query("category_id")
-	if categoryID != "" {
+	if categoryID := c.Query("category_id"); categoryID != "" {
 		query = query.Where("category_id = ?", categoryID)
 	}
-
-	txType := c.Query("type")
-	if txType != "" {
+	if txType := c.Query("type"); txType != "" {
 		query = query.Where("type = ?", txType)
 	}
 
@@ -33,30 +34,59 @@ func GetTransactions(c *gin.Context) {
 	c.JSON(http.StatusOK, transactions)
 }
 
+// CreateTransaction handles adding a new transaction
 func CreateTransaction(c *gin.Context) {
-	var transaction Transaction
-	if err := c.ShouldBindJSON(&transaction); err != nil {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var input struct {
+		Type       string  `json:"type" binding:"required"`
+		Amount     float64 `json:"amount" binding:"required"`
+		Note       string  `json:"note"`
+		CategoryID uint    `json:"category_id"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	transaction := Transaction{
+		Type:       input.Type,
+		Amount:     input.Amount,
+		Note:       input.Note,
+		CategoryID: &input.CategoryID,
+		UserID:     userID.(uint),
+	}
+
 	DB.Create(&transaction)
 	c.JSON(http.StatusCreated, transaction)
 }
 
+// GetTransactionByID retrieves a transaction by its ID
 func GetTransactionByID(c *gin.Context) {
-	id := c.Param("id")
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var transaction Transaction
-	if err := DB.Preload("Category").First(&transaction, id).Error; err != nil {
+	if err := DB.Preload("Category").Preload("User").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
+
 	c.JSON(http.StatusOK, transaction)
 }
 
+// UpdateTransaction updates an existing transaction
 func UpdateTransaction(c *gin.Context) {
-	id := c.Param("id")
 	var transaction Transaction
-	if err := DB.First(&transaction, id).Error; err != nil {
+	if err := DB.First(&transaction, c.Param("id")).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
@@ -68,31 +98,37 @@ func UpdateTransaction(c *gin.Context) {
 	c.JSON(http.StatusOK, transaction)
 }
 
+// SoftDeleteTransaction marks a transaction as deleted
 func SoftDeleteTransaction(c *gin.Context) {
-	id := c.Param("id")
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var transaction Transaction
-	if err := DB.First(&transaction, id).Error; err != nil {
+	if err := DB.Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
 
 	now := time.Now()
 	DB.Model(&transaction).Update("deleted_at", now)
-	c.JSON(http.StatusOK, gin.H{"message": "Transaction flagged as deleted", "deleted_at": now})
+	c.JSON(http.StatusOK, gin.H{"message": "Transaction deleted", "deleted_at": now})
 }
 
+// RestoreTransaction restores a soft-deleted transaction
 func RestoreTransaction(c *gin.Context) {
-	id := c.Param("id")
 	var transaction Transaction
-	if err := DB.Unscoped().First(&transaction, id).Error; err != nil {
+	if err := DB.Unscoped().First(&transaction, c.Param("id")).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
-
 	DB.Model(&transaction).Update("deleted_at", nil)
 	c.JSON(http.StatusOK, gin.H{"message": "Transaction restored"})
 }
 
+// CreateCategory handles adding a new category
 func CreateCategory(c *gin.Context) {
 	var category Category
 	if err := c.ShouldBindJSON(&category); err != nil {
@@ -103,24 +139,24 @@ func CreateCategory(c *gin.Context) {
 	c.JSON(http.StatusCreated, category)
 }
 
+// GetCategories retrieves all categories
 func GetCategories(c *gin.Context) {
 	var categories []Category
 	DB.Find(&categories)
 	c.JSON(http.StatusOK, categories)
 }
 
+// GetTransactionsByCategory retrieves transactions filtered by category
 func GetTransactionsByCategory(c *gin.Context) {
-	categoryID := c.Param("id")
 	var transactions []Transaction
-	DB.Preload("Category").Where("category_id = ?", categoryID).Find(&transactions)
+	DB.Preload("Category").Preload("User").Where("category_id = ?", c.Param("id")).Find(&transactions)
 	c.JSON(http.StatusOK, transactions)
 }
 
+// UpdateTransactionCategory updates the category of a transaction
 func UpdateTransactionCategory(c *gin.Context) {
 	var transaction Transaction
-	id := c.Param("id")
-
-	if err := DB.First(&transaction, id).Error; err != nil {
+	if err := DB.First(&transaction, c.Param("id")).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
@@ -138,14 +174,18 @@ func UpdateTransactionCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, transaction)
 }
 
+// GetSummary returns income, expenses, and balance summary
 func GetSummary(c *gin.Context) {
-	var totalIncome sql.NullFloat64
-	var totalExpense sql.NullFloat64
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
-	DB.Model(&Transaction{}).Where("type = ? AND deleted_at IS NULL", "Income").
+	var totalIncome, totalExpense sql.NullFloat64
+	DB.Model(&Transaction{}).Where("user_id = ? AND type = ? AND deleted_at IS NULL", userID, "Income").
 		Select("COALESCE(SUM(amount), 0)").Scan(&totalIncome)
-
-	DB.Model(&Transaction{}).Where("type = ? AND deleted_at IS NULL", "Expense").
+	DB.Model(&Transaction{}).Where("user_id = ? AND type = ? AND deleted_at IS NULL", userID, "Expense").
 		Select("COALESCE(SUM(amount), 0)").Scan(&totalExpense)
 
 	c.JSON(http.StatusOK, gin.H{

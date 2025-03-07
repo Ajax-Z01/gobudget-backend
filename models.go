@@ -21,6 +21,8 @@ type Transaction struct {
 	Note       string     `json:"note"`
 	CategoryID *uint      `json:"category_id"`
 	Category   Category   `gorm:"foreignKey:CategoryID"`
+	UserID     uint       `json:"user_id"`
+	User       User       `gorm:"foreignKey:UserID"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 	DeletedAt  *time.Time `json:"deleted_at"`
