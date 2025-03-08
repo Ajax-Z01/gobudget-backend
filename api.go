@@ -62,7 +62,13 @@ func CreateTransaction(c *gin.Context) {
 		UserID:     userID.(uint),
 	}
 
-	DB.Create(&transaction)
+	if err := DB.Create(&transaction).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction"})
+		return
+	}
+
+	DB.Preload("Category").Preload("User").First(&transaction, transaction.ID)
+
 	c.JSON(http.StatusCreated, transaction)
 }
 
@@ -85,16 +91,40 @@ func GetTransactionByID(c *gin.Context) {
 
 // UpdateTransaction updates an existing transaction
 func UpdateTransaction(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var transaction Transaction
-	if err := DB.First(&transaction, c.Param("id")).Error; err != nil {
+	if err := DB.Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
-	if err := c.ShouldBindJSON(&transaction); err != nil {
+
+	var input struct {
+		Type       string  `json:"type"`
+		Amount     float64 `json:"amount"`
+		Note       string  `json:"note"`
+		CategoryID uint    `json:"category_id"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	DB.Save(&transaction)
+
+	transaction.Type = input.Type
+	transaction.Amount = input.Amount
+	transaction.Note = input.Note
+	transaction.CategoryID = &input.CategoryID
+
+	if err := DB.Save(&transaction).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transaction"})
+		return
+	}
+
 	c.JSON(http.StatusOK, transaction)
 }
 
