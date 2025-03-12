@@ -17,12 +17,17 @@ func GetTransactions(c *gin.Context) {
 	}
 
 	var transactions []Transaction
-	query := DB.Preload("Category").Preload("User").Where("user_id = ? AND deleted_at IS NULL", userID)
+	query := DB.Preload("Category").Where("user_id = ? AND deleted_at IS NULL", userID)
 
 	// Apply filters if provided
-	if startDate, endDate := c.Query("start_date"), c.Query("end_date"); startDate != "" && endDate != "" {
-		query = query.Where("created_at BETWEEN ? AND ?", startDate, endDate)
+	if startDateStr, endDateStr := c.Query("start_date"), c.Query("end_date"); startDateStr != "" && endDateStr != "" {
+		startDate, err1 := time.Parse("2006-01-02", startDateStr)
+		endDate, err2 := time.Parse("2006-01-02", endDateStr)
+		if err1 == nil && err2 == nil {
+			query = query.Where("created_at >= ? AND created_at <= ?", startDate, endDate)
+		}
 	}
+
 	if categoryID := c.Query("category_id"); categoryID != "" {
 		query = query.Where("category_id = ?", categoryID)
 	}
@@ -67,7 +72,7 @@ func CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	DB.Preload("Category").Preload("User").First(&transaction, transaction.ID)
+	DB.Preload("Category").First(&transaction, transaction.ID)
 
 	c.JSON(http.StatusCreated, transaction)
 }
@@ -81,7 +86,7 @@ func GetTransactionByID(c *gin.Context) {
 	}
 
 	var transaction Transaction
-	if err := DB.Preload("Category").Preload("User").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
+	if err := DB.Preload("Category").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
@@ -128,7 +133,7 @@ func UpdateTransaction(c *gin.Context) {
 	c.JSON(http.StatusOK, transaction)
 }
 
-// SoftDeleteTransaction marks a transaction as deleted
+// Soft delete transaction
 func SoftDeleteTransaction(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -143,18 +148,33 @@ func SoftDeleteTransaction(c *gin.Context) {
 	}
 
 	now := time.Now()
-	DB.Model(&transaction).Update("deleted_at", now)
+	if err := DB.Model(&transaction).Update("deleted_at", now).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete transaction"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Transaction deleted", "deleted_at": now})
 }
 
-// RestoreTransaction restores a soft-deleted transaction
+// Restore a soft-deleted transaction
 func RestoreTransaction(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var transaction Transaction
-	if err := DB.Unscoped().First(&transaction, c.Param("id")).Error; err != nil {
+	if err := DB.Unscoped().Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
-	DB.Model(&transaction).Update("deleted_at", nil)
+
+	if err := DB.Unscoped().Model(&transaction).Update("deleted_at", nil).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to restore transaction"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Transaction restored"})
 }
 
@@ -179,7 +199,7 @@ func GetCategories(c *gin.Context) {
 // GetTransactionsByCategory retrieves transactions filtered by category
 func GetTransactionsByCategory(c *gin.Context) {
 	var transactions []Transaction
-	DB.Preload("Category").Preload("User").Where("category_id = ?", c.Param("id")).Find(&transactions)
+	DB.Preload("Category").Where("category_id = ?", c.Param("id")).Find(&transactions)
 	c.JSON(http.StatusOK, transactions)
 }
 
@@ -223,4 +243,143 @@ func GetSummary(c *gin.Context) {
 		"total_expense": totalExpense.Float64,
 		"balance":       totalIncome.Float64 - totalExpense.Float64,
 	})
+}
+
+// GetBudgets retrieves all budgets for the authenticated user
+func GetBudgets(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var budgets []Budget
+	if err := DB.Preload("Category").Where("user_id = ?", userID).Find(&budgets).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch budgets"})
+		return
+	}
+
+	c.JSON(http.StatusOK, budgets)
+}
+
+// GetBudgetByID retrieves a single budget by its ID
+func GetBudgetByID(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var budget Budget
+	if err := DB.Preload("Category").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&budget).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, budget)
+}
+
+// CreateBudget adds a new budget
+func CreateBudget(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var input struct {
+		CategoryID uint    `json:"category_id" binding:"required"`
+		Amount     float64 `json:"amount" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	budget := Budget{
+		UserID:     userID.(uint),
+		CategoryID: input.CategoryID,
+		Amount:     input.Amount,
+	}
+
+	if err := DB.Create(&budget).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create budget"})
+		return
+	}
+
+	DB.Preload("Category").First(&budget, budget.ID)
+
+	c.JSON(http.StatusCreated, budget)
+}
+
+// UpdateBudget updates an existing budget
+func UpdateBudget(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var budget Budget
+	if err := DB.Preload("Category").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&budget).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		return
+	}
+
+	var input struct {
+		Amount float64 `json:"amount"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	budget.Amount = input.Amount
+	DB.Save(&budget)
+	c.JSON(http.StatusOK, budget)
+}
+
+// SoftDeleteBudget marks a budget as deleted (soft delete)
+func SoftDeleteBudget(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var budget Budget
+	if err := DB.Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&budget).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		return
+	}
+
+	if err := DB.Model(&budget).Update("deleted_at", time.Now()).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete budget"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Budget deleted (soft deleted)"})
+}
+
+// RestoreBudget restores a soft deleted budget
+func RestoreBudget(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var budget Budget
+	if err := DB.Unscoped().Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&budget).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		return
+	}
+
+	if err := DB.Model(&budget).Update("deleted_at", nil).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to restore budget"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Budget restored"})
 }

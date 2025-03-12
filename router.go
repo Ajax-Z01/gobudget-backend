@@ -27,6 +27,7 @@ func SetupRouter() *gin.Engine {
 	{
 		auth.GET("/user", GetUser)
 		auth.POST("/logout", Logout)
+
 		auth.GET("/transactions", GetTransactions)
 		auth.POST("/transactions", CreateTransaction)
 		auth.GET("/transactions/:id", GetTransactionByID)
@@ -38,6 +39,13 @@ func SetupRouter() *gin.Engine {
 		auth.GET("/categories/:id/transactions", GetTransactionsByCategory)
 		auth.PUT("/transactions/:id/category", UpdateTransactionCategory)
 		auth.GET("/summary", GetSummary)
+
+		auth.GET("/budgets", GetBudgets)
+		auth.POST("/budgets", CreateBudget)
+		auth.GET("/budgets/:id", GetBudgetByID)
+		auth.PUT("/budgets/:id", UpdateBudget)
+		auth.PUT("/budgets/delete/:id", SoftDeleteBudget)
+		auth.PUT("/budgets/restore/:id", RestoreBudget)
 	}
 
 	return r
