@@ -7,7 +7,7 @@ func SeedDatabase() {
 	DB.Model(&User{}).Count(&count)
 	if count == 0 {
 		users := []User{
-			{Name: "User 1", Email: "user1@example.com", Password: "password123"},
+			{Name: "User 1", Email: "user1@example.com", Password: "$2a$10$Ys8ik7V3EU.KlFZa7trJ8uSqKDsj.WGNrYu2xsAil1yT3mC.k4hwy"},
 		}
 		DB.Create(&users)
 		log.Println("✅ Users seeded!")

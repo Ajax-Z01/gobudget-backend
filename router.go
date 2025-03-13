@@ -37,7 +37,6 @@ func SetupRouter() *gin.Engine {
 		auth.POST("/categories", CreateCategory)
 		auth.GET("/categories", GetCategories)
 		auth.GET("/categories/:id/transactions", GetTransactionsByCategory)
-		auth.PUT("/transactions/:id/category", UpdateTransactionCategory)
 		auth.GET("/summary", GetSummary)
 
 		auth.GET("/budgets", GetBudgets)

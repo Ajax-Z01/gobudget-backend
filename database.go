@@ -30,6 +30,6 @@ func InitDatabase() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	DB.AutoMigrate(&User{}, &Category{}, &Transaction{})
+	DB.AutoMigrate(&User{}, &Category{}, &Transaction{}, &Budget{})
 	fmt.Println("Database connected & migrated successfully!")
 }

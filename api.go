@@ -39,6 +39,23 @@ func GetTransactions(c *gin.Context) {
 	c.JSON(http.StatusOK, transactions)
 }
 
+// GetTransactionByID retrieves a transaction by its ID
+func GetTransactionByID(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var transaction Transaction
+	if err := DB.Preload("Category").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, transaction)
+}
+
 // CreateTransaction handles adding a new transaction
 func CreateTransaction(c *gin.Context) {
 	userID, exists := c.Get("userID")
@@ -75,23 +92,6 @@ func CreateTransaction(c *gin.Context) {
 	DB.Preload("Category").First(&transaction, transaction.ID)
 
 	c.JSON(http.StatusCreated, transaction)
-}
-
-// GetTransactionByID retrieves a transaction by its ID
-func GetTransactionByID(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	var transaction Transaction
-	if err := DB.Preload("Category").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&transaction).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, transaction)
 }
 
 // UpdateTransaction updates an existing transaction
@@ -203,27 +203,6 @@ func GetTransactionsByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, transactions)
 }
 
-// UpdateTransactionCategory updates the category of a transaction
-func UpdateTransactionCategory(c *gin.Context) {
-	var transaction Transaction
-	if err := DB.First(&transaction, c.Param("id")).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
-		return
-	}
-
-	var input struct {
-		CategoryID uint `json:"category_id"`
-	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	transaction.CategoryID = &input.CategoryID
-	DB.Save(&transaction)
-	c.JSON(http.StatusOK, transaction)
-}
-
 // GetSummary returns income, expenses, and balance summary
 func GetSummary(c *gin.Context) {
 	userID, exists := c.Get("userID")
@@ -259,6 +238,14 @@ func GetBudgets(c *gin.Context) {
 		return
 	}
 
+	for i := range budgets {
+		var totalSpent float64
+		DB.Model(&Transaction{}).
+			Where("user_id = ? AND category_id = ? AND type = ?", userID, budgets[i].CategoryID, "Expense").
+			Select("COALESCE(SUM(amount), 0)").Scan(&totalSpent)
+		budgets[i].Spent = totalSpent
+	}
+
 	c.JSON(http.StatusOK, budgets)
 }
 
@@ -275,6 +262,13 @@ func GetBudgetByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
 	}
+
+	var totalSpent float64
+	DB.Model(&Transaction{}).
+		Where("user_id = ? AND category_id = ? AND type = ?", userID, budget.CategoryID, "Expense").
+		Select("COALESCE(SUM(amount), 0)").Scan(&totalSpent)
+
+	budget.Spent = totalSpent
 
 	c.JSON(http.StatusOK, budget)
 }

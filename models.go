@@ -29,13 +29,15 @@ type Category struct {
 
 // Budget model representing budget allocations per category
 type Budget struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	UserID     uint      `gorm:"not null" json:"user_id"`
-	CategoryID uint      `gorm:"not null" json:"category_id"`
-	Category   Category  `gorm:"foreignKey:CategoryID" json:"category"` // Establish foreign key relationship
-	Amount     float64   `gorm:"not null" json:"amount"`                // Budget amount
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	UserID     uint           `gorm:"not null" json:"user_id"`
+	CategoryID uint           `gorm:"not null" json:"category_id"`
+	Category   Category       `gorm:"foreignKey:CategoryID" json:"category"`
+	Amount     float64        `gorm:"not null" json:"amount"`
+	Spent      float64        `gorm:"-" json:"spent"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 // Transaction model representing income and expenses
