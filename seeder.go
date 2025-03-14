@@ -1,9 +1,19 @@
 package main
 
-import "log"
+import (
+	"log"
+	"math/rand"
+	"time"
+)
 
+// SeedDatabase populates the database with dummy data if it's empty
 func SeedDatabase() {
 	var count int64
+
+	// Clear existing data before seeding (use only in development)
+	DB.Exec("TRUNCATE users, categories, transactions, budgets RESTART IDENTITY CASCADE")
+
+	// ✅ Seed Users
 	DB.Model(&User{}).Count(&count)
 	if count == 0 {
 		users := []User{
@@ -12,34 +22,107 @@ func SeedDatabase() {
 		DB.Create(&users)
 		log.Println("✅ Users seeded!")
 	}
+
+	// ✅ Seed Categories
 	DB.Model(&Category{}).Count(&count)
 	if count == 0 {
 		categories := []Category{
-			{Name: "Gaji"},
-			{Name: "Makanan"},
-			{Name: "Transportasi"},
-			{Name: "Hiburan"},
+			{Name: "Salary"},
+			{Name: "Food"},
+			{Name: "Transportation"},
+			{Name: "Entertainment"},
+			{Name: "Shopping"},
+			{Name: "Investment"},
+			{Name: "Bills"},
 		}
 		DB.Create(&categories)
 		log.Println("✅ Categories seeded!")
 	}
 
+	// ✅ Seed Transactions
 	DB.Model(&Transaction{}).Count(&count)
 	if count == 0 {
 		transactions := []Transaction{
-			{Type: "Income", Amount: 5000, Note: "Gaji bulan ini", CategoryID: getCategoryID("Gaji"), UserID: 1},
-			{Type: "Expense", Amount: 100, Note: "Makan siang", CategoryID: getCategoryID("Makanan"), UserID: 1},
-			{Type: "Expense", Amount: 200, Note: "Beli bensin", CategoryID: getCategoryID("Transportasi"), UserID: 1},
+			// Income transactions
+			{Type: "Income", Amount: randomAmount(4000, 6000), Note: "Last month's salary", CategoryID: getCategoryID("Salary"), UserID: 1, CreatedAt: time.Now().AddDate(0, -6, 0)},
+			{Type: "Income", Amount: randomAmount(4000, 6000), Note: "This month's salary", CategoryID: getCategoryID("Salary"), UserID: 1, CreatedAt: time.Now().AddDate(0, -5, 0)},
+			{Type: "Income", Amount: randomAmount(500, 2000), Note: "Bonus", CategoryID: getCategoryID("Investment"), UserID: 1, CreatedAt: time.Now().AddDate(0, -3, 0)},
+
+			// Expense - Food
+			{Type: "Expense", Amount: randomAmount(50, 150), Note: "Lunch", CategoryID: getCategoryID("Food"), UserID: 1, CreatedAt: time.Now().AddDate(0, -6, 0)},
+			{Type: "Expense", Amount: randomAmount(70, 200), Note: "Dinner outside", CategoryID: getCategoryID("Food"), UserID: 1, CreatedAt: time.Now().AddDate(0, -4, 0)},
+
+			// Expense - Transportation
+			{Type: "Expense", Amount: randomAmount(100, 300), Note: "Motorbike fuel", CategoryID: getCategoryID("Transportation"), UserID: 1, CreatedAt: time.Now().AddDate(0, -5, 0)},
+			{Type: "Expense", Amount: randomAmount(50, 250), Note: "Train ticket", CategoryID: getCategoryID("Transportation"), UserID: 1, CreatedAt: time.Now().AddDate(0, -2, 0)},
+
+			// Expense - Bills
+			{Type: "Expense", Amount: randomAmount(300, 700), Note: "Electricity bill", CategoryID: getCategoryID("Bills"), UserID: 1, CreatedAt: time.Now().AddDate(0, -5, 0)},
+			{Type: "Expense", Amount: randomAmount(100, 500), Note: "Monthly internet", CategoryID: getCategoryID("Bills"), UserID: 1, CreatedAt: time.Now().AddDate(0, -3, 0)},
+
+			// Expense - Entertainment
+			{Type: "Expense", Amount: randomAmount(50, 300), Note: "Movie night", CategoryID: getCategoryID("Entertainment"), UserID: 1, CreatedAt: time.Now().AddDate(0, -4, 0)},
+			{Type: "Expense", Amount: randomAmount(150, 500), Note: "Online games", CategoryID: getCategoryID("Entertainment"), UserID: 1, CreatedAt: time.Now().AddDate(0, -1, 0)},
 		}
-		DB.Create(&transactions)
+
+		// Filter transactions with valid CategoryID
+		var validTransactions []Transaction
+		for _, t := range transactions {
+			if t.CategoryID != nil {
+				validTransactions = append(validTransactions, t)
+			} else {
+				log.Printf("⚠️ Transaction '%s' was not saved because CategoryID is nil!", t.Note)
+			}
+		}
+
+		// Save only valid transactions
+		DB.Create(&validTransactions)
 		log.Println("✅ Transactions seeded!")
+	}
+
+	// ✅ Seed Budgets
+	DB.Model(&Budget{}).Count(&count)
+	if count == 0 {
+		budgets := []Budget{
+			{CategoryID: *getCategoryID("Food"), UserID: 1, Amount: 5000, Month: getCurrentMonth()},
+			{CategoryID: *getCategoryID("Transportation"), UserID: 1, Amount: 3000, Month: getCurrentMonth()},
+			{CategoryID: *getCategoryID("Entertainment"), UserID: 1, Amount: 2000, Month: getCurrentMonth()},
+			{CategoryID: *getCategoryID("Shopping"), UserID: 1, Amount: 4000, Month: getCurrentMonth()},
+			{CategoryID: *getCategoryID("Bills"), UserID: 1, Amount: 7000, Month: getCurrentMonth()},
+		}
+
+		// Filter budgets with valid CategoryID
+		var validBudgets []Budget
+		for _, b := range budgets {
+			if b.CategoryID > 0 {
+				validBudgets = append(validBudgets, b)
+			} else {
+				log.Printf("⚠️ Budget for category ID %v was not saved because CategoryID is nil!", b.CategoryID)
+			}
+		}
+
+		// Save only valid budgets
+		DB.Create(&validBudgets)
+		log.Println("✅ Budgets seeded!")
 	}
 }
 
+// getCategoryID retrieves the category ID by its name
 func getCategoryID(name string) *uint {
 	var category Category
 	if err := DB.Where("name = ?", name).First(&category).Error; err == nil {
 		return &category.ID
 	}
+	log.Printf("⚠️ Category '%s' not found!", name)
 	return nil
+}
+
+// getCurrentMonth returns the current month in "YYYY-MM" format
+func getCurrentMonth() string {
+	return time.Now().Format("2006-01")
+}
+
+// randomAmount generates a random amount between min and max
+func randomAmount(min, max int) float64 {
+	return float64(rand.Intn(max-min) + min)
 }

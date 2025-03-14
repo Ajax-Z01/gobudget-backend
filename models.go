@@ -35,6 +35,7 @@ type Budget struct {
 	Category   Category       `gorm:"foreignKey:CategoryID" json:"category"`
 	Amount     float64        `gorm:"not null" json:"amount"`
 	Spent      float64        `gorm:"-" json:"spent"`
+	Month      string         `json:"month"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at"`
