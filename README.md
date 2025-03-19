@@ -1,185 +1,76 @@
-# GoBudget
+### 📌 **GoBudget-Backend**  
 
-GoBudget adalah aplikasi pencatatan keuangan pribadi berbasis REST API yang dibuat menggunakan Golang dan PostgreSQL.
+GoBudget-Backend is a **RESTful API** built with **Golang** and **PostgreSQL** to power **GoBudget**, a personal finance management application. This backend handles user authentication, expense tracking, budget management, and financial reports.  
 
-## Fitur
-- Registrasi dan login pengguna
-- Menambahkan transaksi (pemasukan dan pengeluaran) dengan kategori
-- Mengupdate transaksi
-- Menghapus transaksi (soft delete dengan `deleted_at`)
-- Melihat daftar transaksi
-- Memfilter transaksi berdasarkan kategori, tipe, dan rentang tanggal
-- Melihat ringkasan keuangan (total pemasukan, pengeluaran, dan saldo)
-- Seeding data untuk testing
-- Mendapatkan informasi pengguna yang sedang login
+## 🚀 **Features**  
+✔️ **User Authentication** – Secure login and registration with JWT  
+✔️ **Expense Tracking** – CRUD operations for transactions  
+✔️ **Budget Management** – Set spending limits per category  
+✔️ **Financial Reports** – Generate summaries and analytics  
+✔️ **Localization Ready** – API supports multiple languages  
+✔️ **Soft Delete** – Uses `deleted_at` for reversible deletion  
 
-## Teknologi yang Digunakan
-- Golang
-- Gin (framework web)
-- GORM (ORM untuk database)
-- PostgreSQL
+## 🏗️ **Tech Stack**  
+- **Golang (Gin Framework)** – Fast and lightweight web framework  
+- **PostgreSQL** – Reliable relational database  
+- **GORM** – ORM for seamless database interactions  
+- **JWT Authentication** – Token-based user authentication  
+- **Swagger** – API documentation for easy integration  
 
-## Instalasi & Penggunaan
-### 1. Clone Repository
-```sh
-git clone https://github.com/Ajax-Z01/gobudget.git
-cd gobudget
+## 📂 **Project Structure**  
+```
+/gobudget-backend
+│── main.go          # Entry point of the app
+│── router.go        # Defines API routes
+│── controllers/     # Handles request logic
+│── models/          # Database schema & ORM models
+│── middleware/      # JWT auth & request validation
+│── database.go      # PostgreSQL connection setup
+│── config/          # App configuration settings
+│── seeder.go        # Initial database seed data
+│── api_test.go      # API testing
 ```
 
-### 2. Konfigurasi Database
-Pastikan PostgreSQL sudah terinstall dan jalankan servernya. Buat database dengan nama `gobudget`.
+## 🛠️ **Setup & Installation**  
 
-### 3. Buat File `.env`
-Buat file `.env` di root proyek dan isi dengan:
+1️⃣ **Clone the repository**  
+```bash
+git clone https://github.com/Ajax-Z01/gobudget-backend.git
+cd gobudget-backend
+```
+
+2️⃣ **Set up the environment**  
+Create a `.env` file and configure database credentials:  
 ```env
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=yourpassword
+DB_USER=your_user
+DB_PASSWORD=your_password
 DB_NAME=gobudget
-JWT_SECRET=your_jwt_secret
+JWT_SECRET=your_secret_key
 ```
 
-### 4. Install Dependencies
-```sh
+3️⃣ **Install dependencies**  
+```bash
 go mod tidy
 ```
 
-### 5. Jalankan Aplikasi
-```sh
+4️⃣ **Run the application**  
+```bash
 go run main.go
 ```
 
-## Endpoint API
-### 1. Registrasi Pengguna
-```http
-POST /register
+5️⃣ **API Documentation** (Swagger)  
+After running the server, access API docs at:  
 ```
-Body JSON:
-```json
-{
-  "name": "Test User",
-  "email": "test@example.com",
-  "password": "password123"
-}
+http://localhost:8080/swagger/index.html
 ```
 
-### 2. Login Pengguna
-```http
-POST /login
-```
-Body JSON:
-```json
-{
-  "email": "test@example.com",
-  "password": "password123"
-}
-```
-Response:
-```json
-{
-  "token": "your_jwt_token"
-}
-```
+## 📌 **Contributing**  
+Feel free to fork this repo and submit pull requests! Any contributions to improve the project are welcome.  
 
-### 3. Menampilkan Semua Transaksi
-```http
-GET /transactions
-Authorization: Bearer your_jwt_token
-```
+🔗 **Frontend Repo**: [GoBudget-Frontend](https://github.com/Ajax-Z01/gobudget-frontend)  
 
-### 4. Menampilkan Transaksi dengan Filter
-```http
-GET /transactions?category_id=1&type=Income&start_date=2025-03-01&end_date=2025-03-03
-Authorization: Bearer your_jwt_token
-```
+---
 
-### 5. Menambahkan Transaksi
-```http
-POST /transactions
-Authorization: Bearer your_jwt_token
-```
-Body JSON:
-```json
-{
-  "type": "Income",
-  "amount": 5000,
-  "note": "Gaji bulan ini",
-  "category_id": 1
-}
-```
-
-### 6. Mengupdate Transaksi
-```http
-PUT /transactions/{id}
-Authorization: Bearer your_jwt_token
-```
-Body JSON:
-```json
-{
-  "amount": 5500,
-  "note": "Gaji bulan ini (update)",
-  "category_id": 2
-}
-```
-
-### 7. Menghapus Transaksi (Soft Delete)
-```http
-DELETE /transactions/{id}
-Authorization: Bearer your_jwt_token
-```
-
-### 8. Ringkasan Keuangan
-```http
-GET /summary
-Authorization: Bearer your_jwt_token
-```
-Response:
-```json
-{
-  "balance": 2000,
-  "total_expense": 3000,
-  "total_income": 5000
-}
-```
-
-### 9. Menambahkan Kategori
-```http
-POST /categories
-Authorization: Bearer your_jwt_token
-```
-Body JSON:
-```json
-{
-  "name": "Makanan"
-}
-```
-
-### 10. Menampilkan Semua Kategori
-```http
-GET /categories
-Authorization: Bearer your_jwt_token
-```
-
-### 11. Mendapatkan Informasi Pengguna
-```http
-GET /user
-Authorization: Bearer your_jwt_token
-```
-Response:
-```json
-{
-  "id": 1,
-  "email": "test@example.com",
-  "name": "Test User"
-}
-```
-
-## Seeding Data
-Untuk mengisi database dengan data awal untuk testing, jalankan:
-```sh
-go run seeder.go
-```
-
-## Lisensi
-Proyek ini menggunakan lisensi MIT.
+Let me know if you need any changes! 🚀
