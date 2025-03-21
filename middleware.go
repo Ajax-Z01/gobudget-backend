@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -20,7 +21,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 		} else {
 			cookie, err := c.Cookie("token")
-			if err == nil {
+			if err == nil && cookie != "" {
 				tokenString = cookie
 			}
 		}
@@ -31,22 +32,29 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		claims := jwt.MapClaims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 			return jwtSecret, nil
 		}, jwt.WithValidMethods([]string{"HS256"}))
 
-		if err != nil {
+		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err.Error()})
 			c.Abort()
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		exp, ok := claims["exp"].(float64)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expiration (exp) missing"})
+			c.Abort()
+			return
+		}
+
+		if time.Now().Unix() > int64(exp) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
 			c.Abort()
 			return
 		}
@@ -59,7 +67,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		userID := uint(userIDFloat)
-
 		c.Set("userID", userID)
 
 		c.Next()

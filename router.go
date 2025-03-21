@@ -13,14 +13,17 @@ func SetupRouter() *gin.Engine {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"https://gobudget-frontend.vercel.app", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Authorization", "Content-Type", "Accept", "Cookie"},
+		AllowHeaders:     []string{"Authorization", "Content-Type", "Accept"},
 		ExposeHeaders:    []string{"Content-Length", "Set-Cookie"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
-	r.POST("/register", Register)
-	r.POST("/login", Login)
+	public := r.Group("/")
+	{
+		public.POST("/register", Register)
+		public.POST("/login", Login)
+	}
 
 	auth := r.Group("/")
 	auth.Use(AuthMiddleware())
@@ -34,9 +37,11 @@ func SetupRouter() *gin.Engine {
 		auth.PUT("/transactions/:id", UpdateTransaction)
 		auth.PUT("/transactions/delete/:id", SoftDeleteTransaction)
 		auth.PUT("/transactions/restore/:id", RestoreTransaction)
+
 		auth.POST("/categories", CreateCategory)
 		auth.GET("/categories", GetCategories)
 		auth.GET("/categories/:id/transactions", GetTransactionsByCategory)
+
 		auth.GET("/summary", GetSummary)
 
 		auth.GET("/budgets", GetBudgets)

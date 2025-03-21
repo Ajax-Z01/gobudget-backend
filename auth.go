@@ -92,7 +92,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("token", token, 3600, "/", "", false, true)
+	c.SetCookie("token", token, 3600, "/", "gobudget-frontend.vercel.app", true, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Login successful"})
 }
