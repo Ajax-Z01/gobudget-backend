@@ -96,7 +96,6 @@ func Login(c *gin.Context) {
 		Name:        "token",
 		Value:       token,
 		Path:        "/",
-		Domain:      "portfolioazhar.my.id",
 		HttpOnly:    true,
 		Secure:      true,
 		SameSite:    http.SameSiteNoneMode,
