@@ -13,7 +13,7 @@ func SetupRouter() *gin.Engine {
 	r.SetTrustedProxies(nil)
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://gobudget-app.portfolioazhar.my.id", "http://localhost:3000"},
+		AllowOrigins:     []string{"https://gobudget.my.id", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type", "Accept", "Cookie"},
 		ExposeHeaders:    []string{"Content-Length", "Set-Cookie"},
