@@ -107,7 +107,17 @@ func Login(c *gin.Context) {
 }
 
 func Logout(c *gin.Context) {
-	c.SetCookie("token", "", -1, "/", "", false, true)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:        "token",
+		Value:       "",
+		Path:        "/",
+		Domain:      "gobudget.my.id",
+		HttpOnly:    true,
+		Secure:      true,
+		SameSite:    http.SameSiteNoneMode,
+		Partitioned: true,
+	})
+
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 }
 
