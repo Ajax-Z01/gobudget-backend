@@ -65,10 +65,12 @@ func CreateTransaction(c *gin.Context) {
 	}
 
 	var input struct {
-		Type       string  `json:"type" binding:"required"`
-		Amount     float64 `json:"amount" binding:"required"`
-		Note       string  `json:"note"`
-		CategoryID uint    `json:"category_id"`
+		Type         string  `json:"type" binding:"required"`
+		Amount       float64 `json:"amount" binding:"required"`
+		Currency     string  `json:"currency" binding:"required"`
+		ExchangeRate float64 `json:"exchange_rate" binding:"required"`
+		Note         string  `json:"note"`
+		CategoryID   uint    `json:"category_id"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -109,10 +111,12 @@ func UpdateTransaction(c *gin.Context) {
 	}
 
 	var input struct {
-		Type       string  `json:"type"`
-		Amount     float64 `json:"amount"`
-		Note       string  `json:"note"`
-		CategoryID uint    `json:"category_id"`
+		Type         string  `json:"type"`
+		Amount       float64 `json:"amount"`
+		Currecy      string  `json:"currency"`
+		ExchangeRate float64 `json:"exchange_rate"`
+		Note         string  `json:"note"`
+		CategoryID   uint    `json:"category_id"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -213,23 +217,19 @@ func GetSummary(c *gin.Context) {
 
 	var totalIncome, totalExpense sql.NullFloat64
 
-	// Hitung Total Income
 	err1 := DB.Model(&Transaction{}).
 		Where("user_id = ? AND type = ? AND deleted_at IS NULL", userID, "Income").
 		Select("COALESCE(SUM(amount), 0)").Scan(&totalIncome).Error
 
-	// Hitung Total Expense
 	err2 := DB.Model(&Transaction{}).
 		Where("user_id = ? AND type = ? AND deleted_at IS NULL", userID, "Expense").
 		Select("COALESCE(SUM(amount), 0)").Scan(&totalExpense).Error
 
-	// Cek jika ada error saat mengambil data income atau expense
 	if err1 != nil || err2 != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch summary data"})
 		return
 	}
 
-	// Struktur untuk menyimpan tren bulanan
 	type MonthlySummary struct {
 		Month        string  `json:"month"`
 		TotalIncome  float64 `json:"total_income"`
@@ -238,7 +238,6 @@ func GetSummary(c *gin.Context) {
 
 	var trends []MonthlySummary
 
-	// Ambil data tren bulanan
 	err3 := DB.Model(&Transaction{}).
 		Select("TO_CHAR(created_at, 'YYYY-MM') AS month, "+
 			"COALESCE(SUM(CASE WHEN type = 'Income' THEN amount ELSE 0 END), 0) AS total_income, "+
@@ -248,18 +247,16 @@ func GetSummary(c *gin.Context) {
 		Order("month ASC").
 		Scan(&trends).Error
 
-	// Cek jika ada error saat mengambil data tren
 	if err3 != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trend data"})
 		return
 	}
 
-	// Kirim respons dengan tren sebagai array kosong jika tidak ada data
 	c.JSON(http.StatusOK, gin.H{
 		"total_income":  totalIncome.Float64,
 		"total_expense": totalExpense.Float64,
 		"balance":       totalIncome.Float64 - totalExpense.Float64,
-		"trend":         trends, // Jika kosong, akan dikirim sebagai `[]`
+		"trend":         trends,
 	})
 }
 
@@ -321,8 +318,10 @@ func CreateBudget(c *gin.Context) {
 	}
 
 	var input struct {
-		CategoryID uint    `json:"category_id" binding:"required"`
-		Amount     float64 `json:"amount" binding:"required"`
+		CategoryID   uint    `json:"category_id" binding:"required"`
+		Amount       float64 `json:"amount" binding:"required"`
+		Currency     string  `json:"currency" binding:"required"`
+		ExchangeRate float64 `json:"exchange_rate" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -361,8 +360,11 @@ func UpdateBudget(c *gin.Context) {
 	}
 
 	var input struct {
-		Amount float64 `json:"amount"`
+		Amount       float64 `json:"amount"`
+		Currency     string  `json:"currency"`
+		ExchangeRate float64 `json:"exchange_rate"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
