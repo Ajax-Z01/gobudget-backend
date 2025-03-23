@@ -15,44 +15,48 @@ type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	Name      string         `json:"name"`
 	Email     string         `gorm:"unique;not null" json:"email"`
-	Password  string         `json:"-"` // Exclude password from JSON responses
+	Password  string         `json:"-"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"` // Soft delete support
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 // Category model representing a transaction category
 type Category struct {
 	ID   uint   `gorm:"primaryKey" json:"id"`
-	Name string `gorm:"unique;not null" json:"name"` // Ensure unique category names
+	Name string `gorm:"unique;not null" json:"name"`
 }
 
 // Budget model representing budget allocations per category
 type Budget struct {
-	ID         uint           `gorm:"primaryKey" json:"id"`
-	UserID     uint           `gorm:"not null" json:"user_id"`
-	CategoryID uint           `gorm:"not null" json:"category_id"`
-	Category   Category       `gorm:"foreignKey:CategoryID" json:"category"`
-	Amount     float64        `gorm:"not null" json:"amount"`
-	Spent      float64        `gorm:"-" json:"spent"`
-	Month      string         `json:"month"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	UserID       uint           `gorm:"not null" json:"user_id"`
+	CategoryID   uint           `gorm:"not null" json:"category_id"`
+	Category     Category       `gorm:"foreignKey:CategoryID" json:"category"`
+	Amount       float64        `gorm:"not null" json:"amount"`
+	Currency     string         `gorm:"not null" json:"currency"`
+	ExchangeRate float64        `gorm:"not null" json:"exchange_rate"`         // Exchange Rate to IDR
+	Spent        float64        `gorm:"-" json:"spent"`                        // Calculated field
+	Month        string         `gorm:"type:varchar(7);not null" json:"month"` // Format: "YYYY-MM"
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 // Transaction model representing income and expenses
 type Transaction struct {
-	ID         uint           `gorm:"primaryKey" json:"id"`
-	Type       string         `gorm:"not null" json:"type"` // "Income" or "Expense"
-	Amount     float64        `gorm:"not null" json:"amount"`
-	Note       string         `json:"note"` // Optional transaction note
-	CategoryID *uint          `json:"category_id"`
-	Category   Category       `gorm:"foreignKey:CategoryID" json:"category"` // Establish foreign key
-	UserID     uint           `gorm:"not null" json:"user_id"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at"` // Soft delete support
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	Type         string         `gorm:"not null" json:"type"` // "Income" or "Expense"
+	Amount       float64        `gorm:"not null" json:"amount"`
+	Currency     string         `gorm:"not null" json:"currency"`
+	ExchangeRate float64        `gorm:"not null" json:"exchange_rate"` // Exchange Rate to IDR
+	Note         string         `json:"note"`
+	CategoryID   *uint          `json:"category_id"`
+	Category     Category       `gorm:"foreignKey:CategoryID" json:"category"`
+	UserID       uint           `gorm:"not null" json:"user_id"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 // HashPassword hashes the user's password before storing it in the database

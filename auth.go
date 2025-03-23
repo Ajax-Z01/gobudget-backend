@@ -93,10 +93,10 @@ func Login(c *gin.Context) {
 	}
 
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:        "token",
-		Value:       token,
-		Path:        "/",
-		Domain:      "gobudget.my.id",
+		Name:  "token",
+		Value: token,
+		Path:  "/",
+		// Domain:      "gobudget.my.id",
 		HttpOnly:    true,
 		Secure:      true,
 		SameSite:    http.SameSiteNoneMode,
@@ -108,10 +108,10 @@ func Login(c *gin.Context) {
 
 func Logout(c *gin.Context) {
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:        "token",
-		Value:       "",
-		Path:        "/",
-		Domain:      "gobudget.my.id",
+		Name:  "token",
+		Value: "",
+		Path:  "/",
+		// Domain:      "gobudget.my.id",
 		HttpOnly:    true,
 		Secure:      true,
 		SameSite:    http.SameSiteNoneMode,

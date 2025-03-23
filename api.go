@@ -65,10 +65,12 @@ func CreateTransaction(c *gin.Context) {
 	}
 
 	var input struct {
-		Type       string  `json:"type" binding:"required"`
-		Amount     float64 `json:"amount" binding:"required"`
-		Note       string  `json:"note"`
-		CategoryID uint    `json:"category_id"`
+		Type         string  `json:"type" binding:"required"`
+		Amount       float64 `json:"amount" binding:"required"`
+		Currency     string  `json:"currency" binding:"required"`
+		ExchangeRate float64 `json:"exchange_rate" binding:"required"`
+		Note         string  `json:"note"`
+		CategoryID   uint    `json:"category_id"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -109,10 +111,12 @@ func UpdateTransaction(c *gin.Context) {
 	}
 
 	var input struct {
-		Type       string  `json:"type"`
-		Amount     float64 `json:"amount"`
-		Note       string  `json:"note"`
-		CategoryID uint    `json:"category_id"`
+		Type         string  `json:"type"`
+		Amount       float64 `json:"amount"`
+		Currecy      string  `json:"currency"`
+		ExchangeRate float64 `json:"exchange_rate"`
+		Note         string  `json:"note"`
+		CategoryID   uint    `json:"category_id"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -321,8 +325,10 @@ func CreateBudget(c *gin.Context) {
 	}
 
 	var input struct {
-		CategoryID uint    `json:"category_id" binding:"required"`
-		Amount     float64 `json:"amount" binding:"required"`
+		CategoryID   uint    `json:"category_id" binding:"required"`
+		Amount       float64 `json:"amount" binding:"required"`
+		Currency     string  `json:"currency" binding:"required"`
+		ExchangeRate float64 `json:"exchange_rate" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -361,8 +367,11 @@ func UpdateBudget(c *gin.Context) {
 	}
 
 	var input struct {
-		Amount float64 `json:"amount"`
+		Amount       float64 `json:"amount"`
+		Currency     string  `json:"currency"`
+		ExchangeRate float64 `json:"exchange_rate"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
