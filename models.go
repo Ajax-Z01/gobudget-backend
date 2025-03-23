@@ -15,10 +15,10 @@ type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	Name      string         `json:"name"`
 	Email     string         `gorm:"unique;not null" json:"email"`
-	Password  string         `json:"-"`
+	Password  string         `json:"-"` // The password is excluded from JSON responses
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"` // Soft delete field
 }
 
 // Category model representing a transaction category
@@ -35,12 +35,12 @@ type Budget struct {
 	Category     Category       `gorm:"foreignKey:CategoryID" json:"category"`
 	Amount       float64        `gorm:"not null" json:"amount"`
 	Currency     string         `gorm:"not null" json:"currency"`
-	ExchangeRate float64        `gorm:"not null" json:"exchange_rate"`         // Exchange Rate to IDR
-	Spent        float64        `gorm:"-" json:"spent"`                        // Calculated field
+	ExchangeRate float64        `gorm:"not null" json:"exchange_rate"`         // Exchange rate to IDR
+	Spent        float64        `gorm:"-" json:"spent"`                        // Calculated field (not stored in DB)
 	Month        string         `gorm:"type:varchar(7);not null" json:"month"` // Format: "YYYY-MM"
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"` // Soft delete field
 }
 
 // Transaction model representing income and expenses
@@ -49,14 +49,14 @@ type Transaction struct {
 	Type         string         `gorm:"not null" json:"type"` // "Income" or "Expense"
 	Amount       float64        `gorm:"not null" json:"amount"`
 	Currency     string         `gorm:"not null" json:"currency"`
-	ExchangeRate float64        `gorm:"not null" json:"exchange_rate"` // Exchange Rate to IDR
+	ExchangeRate float64        `gorm:"not null" json:"exchange_rate"` // Exchange rate to IDR
 	Note         string         `json:"note"`
-	CategoryID   *uint          `json:"category_id"`
+	CategoryID   *uint          `json:"category_id"` // Nullable category ID
 	Category     Category       `gorm:"foreignKey:CategoryID" json:"category"`
 	UserID       uint           `gorm:"not null" json:"user_id"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"` // Soft delete field
 }
 
 // HashPassword hashes the user's password before storing it in the database
