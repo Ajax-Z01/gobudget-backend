@@ -79,11 +79,13 @@ func CreateTransaction(c *gin.Context) {
 	}
 
 	transaction := Transaction{
-		Type:       input.Type,
-		Amount:     input.Amount,
-		Note:       input.Note,
-		CategoryID: &input.CategoryID,
-		UserID:     userID.(uint),
+		Type:         input.Type,
+		Amount:       input.Amount,
+		Currency:     input.Currency,
+		ExchangeRate: input.ExchangeRate,
+		Note:         input.Note,
+		CategoryID:   &input.CategoryID,
+		UserID:       userID.(uint),
 	}
 
 	if err := DB.Create(&transaction).Error; err != nil {
@@ -113,7 +115,7 @@ func UpdateTransaction(c *gin.Context) {
 	var input struct {
 		Type         string  `json:"type"`
 		Amount       float64 `json:"amount"`
-		Currecy      string  `json:"currency"`
+		Currency     string  `json:"currency"`
 		ExchangeRate float64 `json:"exchange_rate"`
 		Note         string  `json:"note"`
 		CategoryID   uint    `json:"category_id"`
@@ -126,6 +128,8 @@ func UpdateTransaction(c *gin.Context) {
 
 	transaction.Type = input.Type
 	transaction.Amount = input.Amount
+	transaction.Currency = input.Currency
+	transaction.ExchangeRate = input.ExchangeRate
 	transaction.Note = input.Note
 	transaction.CategoryID = &input.CategoryID
 
@@ -133,6 +137,8 @@ func UpdateTransaction(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transaction"})
 		return
 	}
+
+	DB.Preload("Category").First(&transaction, transaction.ID)
 
 	c.JSON(http.StatusOK, transaction)
 }
