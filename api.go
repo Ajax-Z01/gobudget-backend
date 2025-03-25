@@ -213,7 +213,7 @@ func GetTransactionsByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, transactions)
 }
 
-// GetSummary returns income, expenses, and balance summary
+// GetSummary retrieves a summary of the user's financial data
 func GetSummary(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -225,11 +225,11 @@ func GetSummary(c *gin.Context) {
 
 	err1 := DB.Model(&Transaction{}).
 		Where("user_id = ? AND type = ? AND deleted_at IS NULL", userID, "Income").
-		Select("COALESCE(SUM(amount), 0)").Scan(&totalIncome).Error
+		Select("COALESCE(SUM(amount * exchange_rate), 0)").Scan(&totalIncome).Error
 
 	err2 := DB.Model(&Transaction{}).
 		Where("user_id = ? AND type = ? AND deleted_at IS NULL", userID, "Expense").
-		Select("COALESCE(SUM(amount), 0)").Scan(&totalExpense).Error
+		Select("COALESCE(SUM(amount * exchange_rate), 0)").Scan(&totalExpense).Error
 
 	if err1 != nil || err2 != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch summary data"})
@@ -246,8 +246,8 @@ func GetSummary(c *gin.Context) {
 
 	err3 := DB.Model(&Transaction{}).
 		Select("TO_CHAR(created_at, 'YYYY-MM') AS month, "+
-			"COALESCE(SUM(CASE WHEN type = 'Income' THEN amount ELSE 0 END), 0) AS total_income, "+
-			"COALESCE(SUM(CASE WHEN type = 'Expense' THEN amount ELSE 0 END), 0) AS total_expense").
+			"COALESCE(SUM(CASE WHEN type = 'Income' THEN amount * exchange_rate ELSE 0 END), 0) AS total_income, "+
+			"COALESCE(SUM(CASE WHEN type = 'Expense' THEN amount * exchange_rate ELSE 0 END), 0) AS total_expense").
 		Where("user_id = ? AND deleted_at IS NULL", userID).
 		Group("month").
 		Order("month ASC").
@@ -275,17 +275,26 @@ func GetBudgets(c *gin.Context) {
 	}
 
 	var budgets []Budget
-	if err := DB.Preload("Category").Where("user_id = ?", userID).Find(&budgets).Error; err != nil {
+	if err := DB.Preload("Category").
+		Where("user_id = ?", userID).
+		Find(&budgets).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch budgets"})
 		return
 	}
 
 	for i := range budgets {
-		var totalSpent float64
-		DB.Model(&Transaction{}).
-			Where("user_id = ? AND category_id = ? AND type = ?", userID, budgets[i].CategoryID, "Expense").
-			Select("COALESCE(SUM(amount), 0)").Scan(&totalSpent)
-		budgets[i].Spent = totalSpent
+		var totalSpent sql.NullFloat64
+		err := DB.Model(&Transaction{}).
+			Where("user_id = ? AND category_id = ? AND type = ? AND deleted_at IS NULL", userID, budgets[i].CategoryID, "Expense").
+			Select("COALESCE(SUM(amount * exchange_rate), 0)").
+			Scan(&totalSpent).Error
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch total spent data"})
+			return
+		}
+
+		budgets[i].Spent = totalSpent.Float64
 	}
 
 	c.JSON(http.StatusOK, budgets)
@@ -300,17 +309,25 @@ func GetBudgetByID(c *gin.Context) {
 	}
 
 	var budget Budget
-	if err := DB.Preload("Category").Where("id = ? AND user_id = ?", c.Param("id"), userID).First(&budget).Error; err != nil {
+	if err := DB.Preload("Category").
+		Where("id = ? AND user_id = ?", c.Param("id"), userID).
+		First(&budget).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
 	}
 
-	var totalSpent float64
-	DB.Model(&Transaction{}).
-		Where("user_id = ? AND category_id = ? AND type = ?", userID, budget.CategoryID, "Expense").
-		Select("COALESCE(SUM(amount), 0)").Scan(&totalSpent)
+	var totalSpent sql.NullFloat64
+	err := DB.Model(&Transaction{}).
+		Where("user_id = ? AND category_id = ? AND type = ? AND deleted_at IS NULL", userID, budget.CategoryID, "Expense").
+		Select("COALESCE(SUM(amount * exchange_rate), 0)").
+		Scan(&totalSpent).Error
 
-	budget.Spent = totalSpent
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch total spent data"})
+		return
+	}
+
+	budget.Spent = totalSpent.Float64
 
 	c.JSON(http.StatusOK, budget)
 }
@@ -336,9 +353,11 @@ func CreateBudget(c *gin.Context) {
 	}
 
 	budget := Budget{
-		UserID:     userID.(uint),
-		CategoryID: input.CategoryID,
-		Amount:     input.Amount,
+		UserID:       userID.(uint),
+		CategoryID:   input.CategoryID,
+		Amount:       input.Amount,
+		Currency:     input.Currency,
+		ExchangeRate: input.ExchangeRate,
 	}
 
 	if err := DB.Create(&budget).Error; err != nil {
@@ -369,6 +388,7 @@ func UpdateBudget(c *gin.Context) {
 		Amount       float64 `json:"amount"`
 		Currency     string  `json:"currency"`
 		ExchangeRate float64 `json:"exchange_rate"`
+		Month        string  `json:"month"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -377,6 +397,9 @@ func UpdateBudget(c *gin.Context) {
 	}
 
 	budget.Amount = input.Amount
+	budget.Currency = input.Currency
+	budget.ExchangeRate = input.ExchangeRate
+	budget.Month = input.Month
 	DB.Save(&budget)
 	c.JSON(http.StatusOK, budget)
 }
